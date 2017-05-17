@@ -1,4 +1,9 @@
 <link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-signals/iron-signals.html">
+<link rel="import" href="../paper-elements/paper-elements.html">
+<link rel="import" href="../iron-elements/iron-elements.html">
+
+<script src="js/thing-finder.js"></script>
 
 <!--
 `tm-thing-finder`
@@ -6,29 +11,205 @@
 
 @demo demo/index.html
 -->
-
 <dom-module id="tm-thing-finder">
+  <!-- UI for finding and requesting things to be built -->
+  <template>
+    <style>
+      :host {
+        display: block;
+        width:100%;
+        height:100%;
+        border: solid red 1px;
+      }
+    </style>
+    <template is="dom-repeat" items="[[nodeDefinitions]]">
+      <tm-node uid="[[item.uid]]" type="[[item.type]]" inventory="[[item.inventory]]" on-node-ready="_nodeReady" on-tm-tender="_tenderAvailable"></tm-node>
+    </template>
+  </template>
+
+  <script>
+
+    (function(Polymer) {
+
+      var nodes = [
+          { type:'chicken', uid:'chicken-001', inventory:{'farm':1} },
+          { type:'egg', uid:'egg-001', inventory:{'chicken':1} }
+      ];
+
+      var requiredInputsMap = {
+        'egg' : [
+          { name: 'chicken',         number: 1,    consume: false },
+          { name: 'chicken-food',    number: 1,    consume: true },
+          { name: 'money',           number: 10,   consume: true },
+          { name: 'time',            number: 20,   consume: true }
+        ],
+        'chicken': [
+          { name: 'farm',            number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'chicken-food': [
+          { name: 'feed-store',      number: 1,    consume: false },
+          { name: 'wheat',           number: 5,    consume: true },
+          { name: 'money',           number: 10,   consume: true },
+          { name: 'time',            number: 10,   consume: true }
+        ],
+        'wheat': [
+          { name: 'field',           number: 1,    consume: false },
+          { name: 'wheat-seed',      number: 10,   consume: true },
+          { name: 'money',           number: 10,   consume: true },
+          { name: 'time',            number: 20,   consume: true }
+        ],
+        'flour': [
+          { name: 'mill',            number: 1,    consume: false },
+          { name: 'wheat',           number: 5,    consume: true },
+          { name: 'money',           number: 10,   consume: true },
+          { name: 'time',            number: 10,   consume: true }
+        ],
+        'bread': [
+          { name: 'baker',           number: 1,    consume: false },
+          { name: 'flour',           number: 1,    consume: true },
+          { name: 'egg',             number: 2,    consume: true },
+          { name: 'money',           number: 10,   consume: true },
+          { name: 'time',            number: 10,   consume: true }
+        ]
+      };
+
+
+      Polymer({
+
+        is: 'tm-thing-finder',
+
+        properties: {
+          uid: { type:String, notify:true, value:'ThingFinder' },
+          nodeDefinitions: { type: Array, notify:true, value: nodes },
+          nodes: { type:Array, notify:true, value:[] }
+        },
+        listeners: {
+          'tm-tender': '_tenderAvailable'
+        },
+        _nodeReady: function(evt) {
+          console.log('Node is ready: ', evt.detail);
+          this.nodes.push(evt.detail);
+        },
+        _tenderAvailable: function(evt) {
+          console.log('Received and tender: ', evt.detail);
+          this._bidForTender(evt.detail);
+        },
+        _bidForTender: function(tender) {
+          this.nodes.forEach(function(node) {
+            console.log('Asking nodes to bid for tender.');
+            node.bidForTender(tender);
+          });
+        },
+        ready: function() {
+          const self = this;
+          const tender = new Tender(self, 'egg',[], function(bid) {
+            console.log('RECEIVED BID: ', bid);
+            const sow = new StatementOfWork(self, bid,[],function(item) {
+              console.log('RECEIVED ITEM: ', item);
+            });
+            bid.returnAddress(sow);
+          });
+          setTimeout(function() {
+            self._bidForTender(tender);
+          }, 2000);
+        }
+      });
+    })(Polymer)
+  </script>
+</dom-module>
+
+<!-- Node that can build stuff -->
+<dom-module id="tm-node">
   <template>
     <style>
       :host {
         display: block;
       }
+      paper-input {
+        width:100px;
+        height:50px;
+      }
     </style>
-    <h2>Hello [[prop1]]!</h2>
+    <paper-card>
+      <div class="card-content">
+        <paper-input label="UID" value="{{uid}}"></paper-input>
+        <paper-input label="Type" value="{{type}}"></paper-input>
+      </div>
+    </paper-card>
   </template>
-
   <script>
-    Polymer({
-
-      is: 'tm-thing-finder',
-
-      properties: {
-        prop1: {
-          type: String,
-          value: 'tm-thing-finder',
+    (function(Polymer) {
+      Polymer({
+        is: 'tm-node',
+        properties: {
+          uid: { type:String, notify:true }, // unique ID for the builder
+          type: { type:String, notify:true }, // thing that can be built
+          inventory: { type:Object, notify:true }, // things currently in inventory
+          inputs: { type:Array, notify:true }, // things that are required/consumed
+          outputs: { type:Array, notify:true }, // things that are produced
+          builds: { type:Array, notify:true } // local builds that are currently waiting for inputs
         },
-      },
+        observers: [
+          'debug(type)'
+        ],
 
-    });
+        bidForTender: function(tender) {
+          // request has been made for node to bid
+          const self = this;
+          if (tender.type === this.type) {
+            const bid = new Bid(self, tender,[],function(sow) {
+                self.buildItem(sow);
+            });
+            tender.returnAddress(bid);
+          }
+        },
+        buildItem: function(sow) {
+          const type = sow.bid.tender.type;
+          const item = new Item(type);
+          const self = this;
+          const deliverable = new Deliverable(self,sow,item);
+          sow.returnAddress(deliverable);
+        },
+
+        // pleaseBuild: function(bid) {
+        //   // request has been made for node to build
+        //   const builtItems = "thing(" + type + "): " + JSON.stringify(ingredients);
+        //   bid.returnAddress(builtItems);
+        // },
+        _receiveBid: function(bid) {
+          // check bid, build if bid is good.
+          this._requestForBuild(bid);
+        },
+        _receiveBuild: function(builtItems) {
+          // check the builtItems, add to inventory if good.
+          this._addToInventory(builtItems);
+        },
+        _requestForBid: function(tender) { // node is making request for other nodes to bid
+          bidBus.pleaseBid(tender, _receiveBid);
+        },
+        _requestForBuild: function(bid) { // node is making a request for another node to build
+          const sow = {
+            returnAddress : _itemDelivered,
+            bid: bid
+          }
+          bid.pleaseBuild(sow);
+        },
+        _itemDelivered: function(item) { // item has been delivered
+          console.log('Item has been delivered: ', item);
+        },
+        _addToInventory: function(builtItems) {
+          // add new built items to the inventory
+        },
+         debug: function(object) {
+          console.log(object);
+        },
+        ready: function() {
+          console.log('Element tm-node has been created.');
+          this.fire('node-ready', this);
+        }
+      });
+    })(window.Polymer);
   </script>
 </dom-module>
