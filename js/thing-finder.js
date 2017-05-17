@@ -28,7 +28,7 @@ class StatementOfWork
   }
 }
 
-class Deliverable
+class Delivery
 {
   constructor(source, sow, item) {
     this.source = source;
