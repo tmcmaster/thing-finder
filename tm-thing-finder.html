@@ -1,9 +1,4 @@
-<link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../iron-signals/iron-signals.html">
-<link rel="import" href="../paper-elements/paper-elements.html">
-<link rel="import" href="../iron-elements/iron-elements.html">
-
-<script src="js/thing-finder.js"></script>
+<link rel="import" href="elements.html">
 
 <!--
 `tm-thing-finder`
@@ -16,15 +11,33 @@
   <template>
     <style>
       :host {
-        display: block;
+        display: inline-block;
         width:100%;
         height:100%;
-        border: solid red 1px;
+        //border: solid red 1px;
+      }
+      paper-material {
+        display: inline-block;
+        width: 100%;
+        //border: solid blue 2px;
       }
     </style>
-    <template is="dom-repeat" items="[[nodeDefinitions]]">
-      <tm-node uid="[[item.uid]]" type="[[item.type]]" inputs="[[item.inputs]]" on-node-ready="_nodeReady" on-tm-tender="_tenderAvailable"></tm-node>
-    </template>
+    <paper-material elevation="1">
+      <tm-node id="concierge" uid="concierge" type="[[type]]" inputs="[[_getInputs(type)]]"></tm-node>
+      <paper-card>
+        <div class="card-content">
+          <paper-input label="Type" value="{{type}}"></paper-input>
+        </div>
+        <div class="card-actions">
+          <paper-button on-tap="_createItem" raised>Create</paper-button>
+        </div>
+      </paper-card>
+    </paper-material>
+    <paper-material elevation="1">
+      <template is="dom-repeat" items="[[nodeDefinitions]]">
+        <tm-node on-tap="_buildItem" uid="[[item.uid]]" type="[[item.type]]" inputs="[[item.inputs]]" on-node-ready="_nodeReady"></tm-node>
+      </template>
+    </paper-material>
   </template>
 
   <script>
@@ -45,6 +58,36 @@
         ],
         'chicken': [
           { name: 'farm',            number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'cat': [
+          { name: 'animal-shelter',  number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'dog': [
+          { name: 'animal-shelter',  number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'bunny': [
+          { name: 'animal-shelter',  number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'fish': [
+          { name: 'fish-shop',  number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'pony': [
+          { name: 'animal-shelter',  number: 1,    consume: false },
+          { name: 'money',           number: 30,   consume: true },
+          { name: 'time',            number: 0,    consume: true }
+        ],
+        'guinea-pig': [
+          { name: 'animal-shelter',  number: 1,    consume: false },
           { name: 'money',           number: 30,   consume: true },
           { name: 'time',            number: 0,    consume: true }
         ],
@@ -83,14 +126,23 @@
         properties: {
           uid: { type:String, notify:true, value:'ThingFinder' },
           nodeDefinitions: { type: Array, notify:true, computed: '_generateNodeDefinitions(uid)' },
-          nodes: { type:Array, notify:true, value:[] }
+          nodes: { type:Array, notify:true, value:[] },
+          type: { type:String, notify:true, value: 'egg' }
         },
         listeners: {
-          'tm-tender': '_tenderAvailable',
           'item-tender': '_processTender',
           'item-bid': '_processBid',
           'item-sow': '_processSOW',
           'item-delivery': '_processDelivery'
+        },
+        _getInputs: function(type) {
+          return requiredInputsMap[type];
+        },
+        _createItem: function() {
+          this.$.concierge.fire('please-build');
+        },
+        _buildItem: function(evt) {
+          console.log('===>>>> ', evt)
         },
         _processTender: function(evt) {
           const tender = evt.detail;
@@ -123,186 +175,30 @@
           console.log('Node is ready: ', evt.detail);
           this.nodes.push(evt.detail);
         },
-        _tenderAvailable: function(evt) {
-          console.log('Received and tender: ', evt.detail);
-          this._bidForTender(evt.detail);
-        },
         _bidForTender: function(tender) {
           console.log('Asking nodes to bid for tender.');
           this.nodes.forEach(function(node) {
-            //node.bidForTender(tender);
             node.fire('item-tender', tender);
           });
         },
         ready: function() {
           const self = this;
-          const tender = new Tender(self, 'egg',[], function(bid) {
-            console.log('RECEIVED BID: ', bid);
-            const sow = new StatementOfWork(self, bid,[],function(item) {
-              console.log('RECEIVED ITEM: ', item);
-            });
-            bid.returnAddress(sow);
-          });
           setTimeout(function() {
-            self._bidForTender(tender);
-          }, 2000);
+            self._bidForTender(new Tender(self, 'egg',[]));
+          }, 1000);
+
+          this.$.concierge.set('inventory', {
+            'bunny':10,
+            'cat':3,
+            'dog':2,
+            'fish':41,
+            'guinea-pig':19,
+            'pony':1,
+            'chicken':10,
+            'egg':42
+          });
         }
       });
     })(Polymer)
-  </script>
-</dom-module>
-
-<!-- Node that can build stuff -->
-<dom-module id="tm-node">
-  <template>
-    <style>
-      :host {
-        display: block;
-      }
-      paper-input {
-        width:150px;
-      }
-      paper-card {
-        float:left;
-      }
-    </style>
-    <paper-card>
-      <div class="card-content">
-        <paper-input label="UID" value="{{uid}}"></paper-input>
-        <paper-input label="Type" value="{{type}}"></paper-input>
-        <ul>
-          <template is="dom-repeat" items="[[inputs]]" as="item">
-            <li>[[item.name]]</li>
-          </template>
-        </ul>
-      </div>
-    </paper-card>
-  </template>
-  <script>
-    (function(Polymer) {
-
-      Polymer({
-        is: 'tm-node',
-        properties: {
-          uid: { type:String, notify:true }, // unique ID for the builder
-          type: { type:String, notify:true }, // thing that can be built
-          inventory: { type:Object, notify:true, value:{} }, // things currently in inventory
-          inputs: { type:Array, notify:true }, // things that are required/consumed
-          outputs: { type:Array, notify:true } // things that are produced
-        },
-        observers: [
-          '_debug(type)',
-          '_inventoryChanged(inventory.*)'
-        ],
-        listeners: {
-          'item-tender': '_processTender',
-          'item-bid': '_processBid',
-          'item-sow': '_processSOW',
-          'item-delivery': '_processDelivery'
-        },
-        _inventoryChanged: function(a) {
-          console.log('-->> Inventory changed: ', a);
-        },
-        _processTender: function(evt) {
-          const tender = evt.detail;
-          console.log('** Node(' + this.uid + ') has received a request from Node(' + tender.source.uid + ') to bid for tender for Item(' + tender.type + ').');
-          if (tender !== undefined && tender.type === this.type) {
-            tender.source.fire('item-bid', new Bid(this, tender,[]));
-          }
-        },
-        _processBid: function(evt) {
-          const bid = evt.detail;
-          console.log('** Node(' + this.uid + ') has received a bid from Node(' + bid.source.uid + ') for building an Item(' + bid.tender.type + ').');
-          bid.source.fire('item-sow', new StatementOfWork(this, bid,[]));
-        },
-        _processSOW: function(evt) {
-          const sow = evt.detail;
-          console.log('** Node(' + this.uid + ') has received a SOW from Node(' + sow.source.uid + ') to build an Item(' + sow.bid.tender.type + ').');
-          const item = new Item(this.type);
-          sow.source.fire('item-delivery', new Delivery(this, sow,item));
-        },
-        _processDelivery: function(evt) {
-          const delivery = evt.detail;
-          console.log('** Node(' + this.uid + ') has received a Delivery from Node(' + delivery.source.uid + ') of an Item(' + delivery.item.type + ').');
-        },
-        _buildItem: function(sow) {
-          // var completed = true;
-          // this.inputs.forEach(function(requiredInput) {
-          //   if (!(requiredInput.type in inventory)) {
-          //     completed = false;
-          //   }
-          // });
-
-        },
-        bidForTender: function(tender) {
-          // request has been made for node to bid
-          console.log('Node(' + this.uid + ') has received a request to tender for Item(' + tender.type + ').');
-          const self = this;
-          if (tender.type === this.type) {
-            console.log('Node(' + self.uid + ') requried inputs', self.inputs);
-            const bid = new Bid(self, tender,[], function(sow) {
-              console.log('Node(' + self.uid + ') is building Item(' + tender.type + ') for ' + tender.source.uid + '.');
-              self.buildItem(sow);
-            });
-            console.log('Node(' + self.uid + ') is biding to build Item(' + tender.type + ') for ' + tender.source.uid + '.');
-            tender.returnAddress(bid);
-          }
-        },
-        buildItem: function(sow) {
-          const type = sow.bid.tender.type;
-          const item = new Item(type);
-          const self = this;
-
-          // console.log('---->>>>>>>');
-          // var promises = this.inputs.map(i => new Promise((resolve,reject)=>{
-          //   resolve('success');
-          // }));
-          //
-          // Promise.all(promises).then(values => {
-          //   console.log('------->> ', values);
-          // });
-
-          const deliverable = new Deliverable(self,sow,item);
-          sow.returnAddress(deliverable);
-        },
-
-        // pleaseBuild: function(bid) {
-        //   // request has been made for node to build
-        //   const builtItems = "thing(" + type + "): " + JSON.stringify(ingredients);
-        //   bid.returnAddress(builtItems);
-        // },
-        _receiveBid: function(bid) {
-          // check bid, build if bid is good.
-          this._requestForBuild(bid);
-        },
-        _receiveBuild: function(builtItems) {
-          // check the builtItems, add to inventory if good.
-          this._addToInventory(builtItems);
-        },
-        _requestForBid: function(tender) { // node is making request for other nodes to bid
-          bidBus.pleaseBid(tender, _receiveBid);
-        },
-        _requestForBuild: function(bid) { // node is making a request for another node to build
-          const sow = {
-            returnAddress : _itemDelivered,
-            bid: bid
-          }
-          bid.pleaseBuild(sow);
-        },
-        _itemDelivered: function(item) { // item has been delivered
-          console.log('Item has been delivered: ', item);
-        },
-        _addToInventory: function(builtItems) {
-          // add new built items to the inventory
-        },
-        _debug: function(object) {
-          console.log(object);
-        },
-        ready: function() {
-          console.log('Element tm-node has been created.');
-          this.fire('node-ready', this);
-        }
-      });
-    })(window.Polymer);
   </script>
 </dom-module>

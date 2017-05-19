@@ -1,0 +1,115 @@
+<dom-module id="tm-node">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+      paper-input {
+        width:150px;
+      }
+      paper-card {
+        float:left;
+      }
+    </style>
+    <paper-card>
+      <div class="card-content">
+        <h3>[[type]] ([[uid]])</h3>
+        <fieldset>
+          <legend>inventory</legend>
+          <ul>
+            <template is="dom-repeat" items="[[_getInventory(inventory.*)]]" as="item">
+              <li>[[item.name]] = [[item.count]]</li>
+            </template>
+          </ul>
+        </fieldset>
+        <fieldset>
+          <legend>inputs</legend>
+          <ul>
+            <template is="dom-repeat" items="[[inputs]]" as="item">
+              <li>[[item.name]]</li>
+            </template>
+          </ul>
+        </fieldset>
+        <fieldset>
+          <legend>outputs</legend>
+          <ul>
+            <template is="dom-repeat" items="[[outputs]]" as="item">
+              <li>[[item.name]]</li>
+            </template>
+          </ul>
+        </fieldset>
+      </div>
+    </paper-card>
+  </template>
+  <script>
+    (function(Polymer) {
+
+      Polymer({
+        is: 'tm-node',
+        properties: {
+          uid: { type:String, notify:true }, // unique ID for the builder
+          type: { type:String, notify:true }, // thing that can be built
+          inventory: { type:Object, notify:true, value:{} }, // things currently in inventory
+          inputs: { type:Array, notify:true }, // things that are required/consumed
+          outputs: { type:Array, notify:true } // things that are produced
+        },
+        observers: [
+          '_debug(inventory)',
+          '_inventoryChanged(inventory)'
+        ],
+        listeners: {
+          'item-tender': '_processTender',
+          'item-bid': '_processBid',
+          'item-sow': '_processSOW',
+          'item-delivery': '_processDelivery',
+          'please-build': '_buildItem'
+        },
+        _buildItem: function() {
+          console.log('Requested to build item: ' + this.type);
+          this.inputs.forEach(function(input) {
+            console.log('Required input = ' + input.name);
+          });
+          if (!(this.type in this.inventory)) {
+            this.inventory[this.type] = 0;
+          }
+          this.set('inventory.' + this.type, this.inventory[this.type] + 1);
+        },
+        _getInventory: function(inventoryChange) {
+          return Object.keys(this.inventory).map(k => ({name:k, count:this.inventory[k]}));
+        },
+        _inventoryChanged: function(a) {
+          console.log('-->> Inventory changed: ', a);
+        },
+        _processTender: function(evt) {
+          const tender = evt.detail;
+          console.log('** Node(' + this.uid + ') has received a request from Node(' + tender.source.uid + ') to bid for tender for Item(' + tender.type + ').');
+          if (tender !== undefined && tender.type === this.type) {
+            tender.source.fire('item-bid', new Bid(this, tender,[]));
+          }
+        },
+        _processBid: function(evt) {
+          const bid = evt.detail;
+          console.log('** Node(' + this.uid + ') has received a bid from Node(' + bid.source.uid + ') for building an Item(' + bid.tender.type + ').');
+          bid.source.fire('item-sow', new StatementOfWork(this, bid,[]));
+        },
+        _processSOW: function(evt) {
+          const sow = evt.detail;
+          console.log('** Node(' + this.uid + ') has received a SOW from Node(' + sow.source.uid + ') to build an Item(' + sow.bid.tender.type + ').');
+          const item = new Item(this.type);
+          sow.source.fire('item-delivery', new Delivery(this, sow,item));
+        },
+        _processDelivery: function(evt) {
+          const delivery = evt.detail;
+          console.log('** Node(' + this.uid + ') has received a Delivery from Node(' + delivery.source.uid + ') of an Item(' + delivery.item.type + ').');
+        },
+        _debug: function(object) {
+          console.log('DEBUG: ', object);
+        },
+        ready: function() {
+          console.log('Element tm-node has been created.');
+          this.fire('node-ready', this);
+        }
+      });
+    })(window.Polymer);
+  </script>
+</dom-module>
