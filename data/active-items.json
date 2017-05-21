@@ -1,0 +1,22 @@
+{
+  "egg": true,
+  "chicken": true,
+  "chicken-food": true,
+  "wheat": true,
+  "wheat-seed": true,
+  "bunny":false,
+  "cat":false,
+  "dog":false,
+  "fish":false,
+  "guinea-pig":false,
+  "pony":false,
+  "book":false,
+  "tv":false,
+  "chair":false,
+  "table":false,
+  "toilet":false,
+  "bed":false,
+  "computer":false,
+  "bathroom-sink":false,
+  "kitchen-sink":false
+}

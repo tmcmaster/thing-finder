@@ -1,0 +1,84 @@
+<dom-module id="tm-concierge">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+        border: solid red 4px;
+        width:800px;
+      }
+      paper-card {
+        float:left;
+      }
+    </style>
+    <paper-card>
+      <div class="card-content">
+        <h3>[[type]]</h3>
+        <paper-input label="Type" value="{{type}}"></paper-input>
+        <paper-button on-tap="_tendorForItem" raised>Create</paper-button>
+      </div>
+    </paper-card>
+    <paper-card>
+      <div class="card-content">
+        <fieldset class$="type-[[type]]">
+          <legend>inventory</legend>
+          <ul>
+            <template is="dom-repeat" items="[[_getInventory(inventory.*)]]" as="item">
+              <li>[[item.name]] = [[item.count]]</li>
+            </template>
+          </ul>
+        </fieldset>
+      </div>
+    </paper-card>
+  </template>
+  <script>
+    (function(Polymer) {
+      Polymer({
+        is: 'tm-concierge',
+        properties: {
+          uid: { type:String, notify:true, value:"concierge" },
+          type: { type:String, notify:true },
+          inventory: { type:Object, notify:true }
+        },
+        listeners: {
+          'item-bid': '_processBid',
+          'item-delivery': '_processDelivery'
+        },
+        observers: [
+          'debug(inventory)'
+        ],
+        _tendorForItem: function() {
+          const tender = new Tender(this, this.type);
+          this.fire('tender-published', tender);
+        },
+        _processBid: function(evt) {
+          const bid = evt.detail;
+          console.log('** Node(' + this.uid + ') has received a bid from Node(' + bid.source.uid + ') for building an Item(' + bid.tender.type + ').');
+          const sow = new StatementOfWork(this, bid,[]);
+          bid.source.fire('item-sow', sow);
+        },
+        _processDelivery: function(evt) {
+          const delivery = evt.detail;
+          console.log('** Node(' + this.uid + ') has received a Delivery from Node(' + delivery.source.uid + ') of an Item(' + delivery.item.type + ').');
+          const type = delivery.item.type;
+          this._addToInventory(type);
+        },
+        _getInventory: function(inventoryChange) {
+          return Object.keys(this.inventory).map(k => ({name:k, count:this.inventory[k]}));
+        },
+        _addToInventory: function(type) {
+          console.log('** Node(' + this.uid + ') is adding Item(' + type + ") to it's inventory.");
+          if (!(type in this.inventory)) {
+            this.inventory[type] = 0;
+          }
+          this.set('inventory.' + type, this.inventory[type] + 1);
+        },
+        debug: function(object) {
+          console.log(object);
+        },
+        ready: function() {
+          console.log('Element tm-concierge has been created.');
+        }
+      });
+    })(window.Polymer);
+  </script>
+</dom-module>

@@ -1,0 +1,118 @@
+{
+  "egg" : [
+    { "name": "chicken",         "number": 1,    "consume": false },
+    { "name": "chicken-food",    "number": 1,    "consume": true },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 20,   "consume": true }
+  ],
+  "chicken": [
+    { "name": "farm",            "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "cat": [
+    { "name": "animal-shelter",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "dog": [
+    { "name": "animal-shelter",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "bunny": [
+    { "name": "animal-shelter",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "fish": [
+    { "name": "fish-shop",       "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "book": [
+    { "name": "book-shop",      "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "pony": [
+    { "name": "animal-shelter",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "guinea-pig": [
+    { "name": "animal-shelter",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 30,   "consume": true },
+    { "name": "time",            "number": 0,    "consume": true }
+  ],
+  "chicken-food": [
+    { "name": "feed-store",      "number": 1,    "consume": false },
+    { "name": "wheat",           "number": 5,    "consume": true },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "wheat": [
+    { "name": "field",           "number": 1,    "consume": false },
+    { "name": "wheat-seed",      "number": 10,   "consume": true },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 20,   "consume": true }
+  ],
+  "wheat-seed": [
+    { "name": "feed-store",      "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 20,   "consume": true }
+  ],
+  "flour": [
+    { "name": "mill",            "number": 1,    "consume": false },
+    { "name": "wheat",           "number": 5,    "consume": true },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "bread": [
+    { "name": "baker",           "number": 1,    "consume": false },
+    { "name": "flour",           "number": 1,    "consume": true },
+    { "name": "egg",             "number": 2,    "consume": true },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "tv": [
+    { "name": "tv-shop",         "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "chair": [
+    { "name": "furnature-shop",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "table": [
+    { "name": "furnature-shop",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "bed": [
+    { "name": "furnature-shop",  "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "toilet": [
+    { "name": "plumbing-shop",   "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "computer": [
+    { "name": "computer-shop",   "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "kitchen-sink": [
+    { "name": "plumbing-shop",   "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ],
+  "bathroom-sink": [
+    { "name": "plumbing-shop",   "number": 1,    "consume": false },
+    { "name": "money",           "number": 10,   "consume": true },
+    { "name": "time",            "number": 10,   "consume": true }
+  ]
+}

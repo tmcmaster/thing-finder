@@ -10,11 +10,14 @@
       paper-card {
         float:left;
       }
+      fieldset.type-guinea-pig {
+        //  border:solid red 1px;
+      }
     </style>
     <paper-card>
       <div class="card-content">
         <h3>[[type]] ([[uid]])</h3>
-        <fieldset>
+        <fieldset class$="type-[[type]]">
           <legend>inventory</legend>
           <ul>
             <template is="dom-repeat" items="[[_getInventory(inventory.*)]]" as="item">
@@ -51,7 +54,8 @@
           type: { type:String, notify:true }, // thing that can be built
           inventory: { type:Object, notify:true, value:{} }, // things currently in inventory
           inputs: { type:Array, notify:true }, // things that are required/consumed
-          outputs: { type:Array, notify:true } // things that are produced
+          outputs: { type:Array, notify:true }, // things that are produced
+          sowList: { type:Array, notify:true, value:[] }
         },
         observers: [
           '_debug(inventory)',
@@ -65,14 +69,25 @@
           'please-build': '_buildItem'
         },
         _buildItem: function() {
-          console.log('Requested to build item: ' + this.type);
+          console.log('Node(' + this.type + ') has been requested to build item: ' + this.type);
+          const self = this;
           this.inputs.forEach(function(input) {
-            console.log('Required input = ' + input.name);
+            const type = input.name;
+            console.log('Required input = ' + type);
+            if (type !== 'money' && type !== 'time' && input.consume) {
+              const tender = new Tender(self, type);
+              self.fire('tender-published', tender);
+            }
           });
-          if (!(this.type in this.inventory)) {
-            this.inventory[this.type] = 0;
+          this._addToInventory(this.type);
+        },
+        _addToInventory: function(type) {
+          console.log('** Node(' + this.uid + ') is adding Item(' + type + ") to it's inventory.");
+
+          if (!(type in this.inventory)) {
+            this.inventory[type] = 0;
           }
-          this.set('inventory.' + this.type, this.inventory[this.type] + 1);
+          this.set('inventory.' + type, this.inventory[type] + 1);
         },
         _getInventory: function(inventoryChange) {
           return Object.keys(this.inventory).map(k => ({name:k, count:this.inventory[k]}));
@@ -85,6 +100,8 @@
           console.log('** Node(' + this.uid + ') has received a request from Node(' + tender.source.uid + ') to bid for tender for Item(' + tender.type + ').');
           if (tender !== undefined && tender.type === this.type) {
             tender.source.fire('item-bid', new Bid(this, tender,[]));
+          } else {
+            console.log('** Node(' + this.uid + ') is not going to tender to Node(' + tender.source.uid + ') build Item(' + tender.type + ').');
           }
         },
         _processBid: function(evt) {
@@ -95,12 +112,50 @@
         _processSOW: function(evt) {
           const sow = evt.detail;
           console.log('** Node(' + this.uid + ') has received a SOW from Node(' + sow.source.uid + ') to build an Item(' + sow.bid.tender.type + ').');
-          const item = new Item(this.type);
-          sow.source.fire('item-delivery', new Delivery(this, sow,item));
+          if (this._checkInventory()) {
+            const item = new Item(this.type);
+            console.log('** Node(' + this.uid + ') delivering Item(' + sow.bid.tender.type + ') to Node(' + sow.source.uid + ')');
+            sow.source.fire('item-delivery', new Delivery(this, sow,item));
+          } else {
+            console.log('** Node(' + this.uid + ') pausing SOW for Node(' + sow.source.uid + ') for inventory missing inputs to build Item(' + sow.bid.tender.type + ').');
+            this.sowList.push(sow);
+          }
         },
         _processDelivery: function(evt) {
           const delivery = evt.detail;
           console.log('** Node(' + this.uid + ') has received a Delivery from Node(' + delivery.source.uid + ') of an Item(' + delivery.item.type + ').');
+          const type = delivery.item.type;
+          this._addToInventory(type);
+          this._checkForOutstandingSOW();
+        },
+        _checkForOutstandingSOW: function() {
+          if (this.sowList.length > 0) {
+            const self = this;
+            for (var i=0; i<this.sowList.length; i++) {
+              const sow = this.sowList[0];
+              this.sowList.splice(0, 1);
+              const item = new Item(this.type);
+              console.log('** Node(' + self.uid + ') delivering Item(' + sow.bid.tender.type + ') to Node(' + sow.bid.tender.source.uid + ')');
+              sow.source.fire('item-delivery', new Delivery(this, sow,item));
+            }
+          }
+        },
+        _checkInventory: function() {
+          var goodToGo = true;
+          const self = this;
+          const requiredInputs = this._getRequiredInputs();
+          requiredInputs.forEach(function(input) {
+            if (!(input.name in self.inventory) || self.inventory[input.type] < 1) {
+              const tender = new Tender(self, input.name);
+              self.fire('tender-published', tender);
+              goodToGo = false;
+            }
+          });
+          return goodToGo;
+        },
+        _getRequiredInputs: function() {
+          const requiredInputs = this.inputs.filter(i => (i.name !== 'money' && i.name !== 'time' && i.consume));
+          return requiredInputs;
         },
         _debug: function(object) {
           console.log('DEBUG: ', object);

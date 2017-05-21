@@ -22,16 +22,13 @@
         //border: solid blue 2px;
       }
     </style>
+
+    <iron-ajax auto url="data/required-input-map.json" handle-as="json" last-response="{{requiredInputsMap}}"></iron-ajax>
+    <iron-ajax auto url="data/active-items.json" handle-as="json" last-response="{{activeItems}}"></iron-ajax>
+    <iron-ajax auto url="data/inventory.json" handle-as="json" last-response="{{inventory}}"></iron-ajax>
+
     <paper-material elevation="1">
-      <tm-node id="concierge" uid="concierge" type="[[type]]" inputs="[[_getInputs(type)]]"></tm-node>
-      <paper-card>
-        <div class="card-content">
-          <paper-input label="Type" value="{{type}}"></paper-input>
-        </div>
-        <div class="card-actions">
-          <paper-button on-tap="_createItem" raised>Create</paper-button>
-        </div>
-      </paper-card>
+      <tm-concierge id="concierge" type="egg" inventory="{{inventory}}"></tm-concierge>
     </paper-material>
     <paper-material elevation="1">
       <template is="dom-repeat" items="[[nodeDefinitions]]">
@@ -44,159 +41,61 @@
 
     (function(Polymer) {
 
-      var nodes = [
-          { type:'chicken', uid:'chicken-001', inventory:{'farm':1} },
-          { type:'egg', uid:'egg-001', inventory:{'chicken':1} }
-      ];
-
-      var requiredInputsMap = {
-        'egg' : [
-          { name: 'chicken',         number: 1,    consume: false },
-          { name: 'chicken-food',    number: 1,    consume: true },
-          { name: 'money',           number: 10,   consume: true },
-          { name: 'time',            number: 20,   consume: true }
-        ],
-        'chicken': [
-          { name: 'farm',            number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'cat': [
-          { name: 'animal-shelter',  number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'dog': [
-          { name: 'animal-shelter',  number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'bunny': [
-          { name: 'animal-shelter',  number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'fish': [
-          { name: 'fish-shop',  number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'pony': [
-          { name: 'animal-shelter',  number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'guinea-pig': [
-          { name: 'animal-shelter',  number: 1,    consume: false },
-          { name: 'money',           number: 30,   consume: true },
-          { name: 'time',            number: 0,    consume: true }
-        ],
-        'chicken-food': [
-          { name: 'feed-store',      number: 1,    consume: false },
-          { name: 'wheat',           number: 5,    consume: true },
-          { name: 'money',           number: 10,   consume: true },
-          { name: 'time',            number: 10,   consume: true }
-        ],
-        'wheat': [
-          { name: 'field',           number: 1,    consume: false },
-          { name: 'wheat-seed',      number: 10,   consume: true },
-          { name: 'money',           number: 10,   consume: true },
-          { name: 'time',            number: 20,   consume: true }
-        ],
-        'flour': [
-          { name: 'mill',            number: 1,    consume: false },
-          { name: 'wheat',           number: 5,    consume: true },
-          { name: 'money',           number: 10,   consume: true },
-          { name: 'time',            number: 10,   consume: true }
-        ],
-        'bread': [
-          { name: 'baker',           number: 1,    consume: false },
-          { name: 'flour',           number: 1,    consume: true },
-          { name: 'egg',             number: 2,    consume: true },
-          { name: 'money',           number: 10,   consume: true },
-          { name: 'time',            number: 10,   consume: true }
-        ]
-      };
-
-
       Polymer({
 
         is: 'tm-thing-finder',
 
         properties: {
           uid: { type:String, notify:true, value:'ThingFinder' },
-          nodeDefinitions: { type: Array, notify:true, computed: '_generateNodeDefinitions(uid)' },
+          requiredInputsMap: { type:Object, notify:true },
+          inventory: { type:Object, notify:true },
+          activeItems: { type:Object, notify:true },
+          nodeDefinitions: { type: Array, notify:true, computed: '_generateNodeDefinitions(requiredInputsMap, activeItems)' },
           nodes: { type:Array, notify:true, value:[] },
-          type: { type:String, notify:true, value: 'egg' }
+          type: { type:String, notify:true, value: 'egg' },
+          counter: { type:Number, notify:true, value: 10000 }
         },
         listeners: {
-          'item-tender': '_processTender',
-          'item-bid': '_processBid',
-          'item-sow': '_processSOW',
-          'item-delivery': '_processDelivery'
+          'tender-published': '_processTender',
         },
-        _getInputs: function(type) {
-          return requiredInputsMap[type];
-        },
-        _createItem: function() {
-          this.$.concierge.fire('please-build');
-        },
-        _buildItem: function(evt) {
-          console.log('===>>>> ', evt)
+        observers: [
+          'debug(inventory)'
+        ],
+        debug: function(object) {
+          console.log('FINDER DEBUG: ', object);
         },
         _processTender: function(evt) {
           const tender = evt.detail;
-          console.log('++ Node(' + this.uid + ') has received a request from Node(' + tender.source.uid + ') to bid for tender for Item(' + tender.type + ').');
-          if (tender !== undefined && tender.type === this.type) {
-            tender.source.fire('item-bid', new Bid(this, tender,[]));
-          }
+          console.log('++ Node(' + this.uid + ') has received a request from Node(' + tender.source.uid + ') to find a node to build Item(' + tender.type + ').');
+          this._publishTender(tender);
         },
-        _processBid: function(evt) {
-          const bid = evt.detail;
-          console.log('++ Node(' + this.uid + ') has received a bid from Node(' + bid.source.uid + ') for building an Item(' + bid.tender.type + ').');
-          bid.source.fire('item-sow', new StatementOfWork(this, bid,[]));
-        },
-        _processSOW: function(evt) {
-          const sow = evt.detail;
-          console.log('++ Node(' + this.uid + ') has received a SOW from Node(' + sow.source.uid + ') to build an Item(' + sow.bid.tender.type + ').');
-        },
-        _processDelivery: function(evt) {
-          const delivery = evt.detail;
-          console.log('++ Node(' + this.uid + ') has received a Delivery from Node(' + delivery.source.uid + ') of an Item(' + delivery.item.type + ').');
-        },
-        _generateNodeDefinitions: function(uid) {
+        _generateNodeDefinitions: function(requiredInputsMap,activeItems) {
           return Object.keys(requiredInputsMap).map(k => ({
             type: k,
             uid: k + '-001',
             inputs: requiredInputsMap[k]
-          }));
+          }))
+          .filter(i => (i.type in activeItems && activeItems[i.type]));
         },
         _nodeReady: function(evt) {
           console.log('Node is ready: ', evt.detail);
           this.nodes.push(evt.detail);
         },
-        _bidForTender: function(tender) {
-          console.log('Asking nodes to bid for tender.');
+        _publishTender: function(tender) {
+          console.log('Asking nodes to bid for tender: ' + tender.item);
+          const self = this;
           this.nodes.forEach(function(node) {
-            node.fire('item-tender', tender);
+            if (node.uid !== 'concierge' && node.type === tender.type) {
+              console.log('Asking node to tendor: ' + node.uid + ' for ' + tender.type);
+              if (self.counter > 0) {
+                self.counter--;
+                node.fire('item-tender', tender);
+              }
+            }
           });
         },
         ready: function() {
-          const self = this;
-          setTimeout(function() {
-            self._bidForTender(new Tender(self, 'egg',[]));
-          }, 1000);
-
-          this.$.concierge.set('inventory', {
-            'bunny':10,
-            'cat':3,
-            'dog':2,
-            'fish':41,
-            'guinea-pig':19,
-            'pony':1,
-            'chicken':10,
-            'egg':42
-          });
+          console.log('tm-thing-finder has been created.');
         }
       });
     })(Polymer)
